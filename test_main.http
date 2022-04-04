@@ -1,0 +1,13 @@
+# Test your FastAPI endpoints
+
+GET http://127.0.0.1:8000/
+Accept: application/json
+
+> {% client.global.set("userid", response.body.json.userid); %}
+
+###
+
+GET http://127.0.0.1:8000/calculate/5
+Accept: application/json
+
+###
