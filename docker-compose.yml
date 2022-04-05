@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:14.1-alpine
+    hostname: db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=requests
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - requestsstack
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+  api:
+    container_name: api
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: rapt:latest
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    restart: on-failure
+    networks:
+      - requestsstack
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: requests
+    links:
+      - db
+volumes:
+  db:
+    driver: local
+networks:
+  requestsstack:
+    driver: bridge

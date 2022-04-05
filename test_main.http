@@ -1,13 +1,88 @@
 # Test your FastAPI endpoints
 
+### Test Get UserId
 GET http://127.0.0.1:8000/
 Accept: application/json
 
-> {% client.global.set("userid", response.body.json.userid); %}
+> {%
 
-###
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
 
-GET http://127.0.0.1:8000/calculate/5
+client.test("Response content-type is json", function() {
+  var type = response.contentType.mimeType;
+  client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+});
+
+client.test("UserId option exists", function() {
+  client.assert(response.body.hasOwnProperty("userid"), "Cannot find 'userid' option in response");
+});
+
+client.test("Message option exists", function() {
+  client.assert(response.body.hasOwnProperty("message"), "Cannot find 'message' option in response");
+});
+
+
+client.global.set("userid", response.body.userid);
+
+%}
+
+### Test Fibonacci
+
+POST http://127.0.0.1:8000/calculate/
 Accept: application/json
+Content-Type: application/json
 
-###
+{
+"upto": 10,
+"userId": "{{ userid }}"
+}
+
+> {%
+
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+
+client.test("Response content-type is json", function() {
+  var type = response.contentType.mimeType;
+  client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+});
+
+client.test("results option exists", function() {
+  client.assert(response.body.hasOwnProperty("results"), "Cannot find 'results' option in response");
+});
+
+%}
+
+### Test Create Transaction
+
+POST http://127.0.0.1:8000/transaction/
+accept: application/json
+content-type: application/json
+
+{ "user_id": "{{ userid }}",
+  "amount": 100.00,
+  "currency": "USD",
+  "description": "Test transaction",
+  "type": "debit",
+  "category": "Test"
+}
+
+> {%
+
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+
+client.test("Response content-type is json", function() {
+  var type = response.contentType.mimeType;
+  client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+});
+
+client.test("id option exists", function() {
+  client.assert(response.body.hasOwnProperty("id"), "Cannot find 'id' option in response");
+});
+
+%}
