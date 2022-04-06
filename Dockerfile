@@ -20,5 +20,6 @@ ENV PYTHONUNBUFFERED 1
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ./app /code/app
+COPY ./app/templates /code/app/templates
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

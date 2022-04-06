@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transaction Creator</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+        $.when($.getJSON("/"),$.ready).then(function (data){
+            $('#userId').val(data[0].userid)
+        });
+    </script>
+</head>
+<body>
+<h1>Transaction Creator</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <label>User Id: <input type="text" id="userId" autocomplete="off" value="some-key-token" readonly/></label>
+            <button onclick="connect(event)">Connect</button>
+            <hr>
+            <label>Amount <input type="number" id="amount" autocomplete="on" min="0.00" step="0.01" required/></label> <br />
+            <label>Currency <select id="currency" required>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="JPY">JPY</option>
+                <option value="CAD">CAD</option>
+                <option value="AUD">AUD</option>
+                <option value="NZD">NZD</option>
+                <option value="CHF">CHF</option>
+                <option value="HKD">HKD</option>
+                <option value="SGD">SGD</option>
+                <option value="SEK">SEK</option>
+            </select></label><br />
+            <label>Description <input type="text" id="description" autocomplete="on" required/></label><br />
+            <label>Category <input type="text" id="category" autocomplete="on" required /></label><br />
+            <label>Type <select id="type" required>
+                    <option value="debit">Debit</option>
+                    <option value="credit">Credit</option>
+                </select>
+            </label>
+            <button>Send</button>
+        </form>
+        <hr>
+        <ul id='transactions'>
+        </ul>
+        <script>
+        var ws = null;
+            function connect(event) {
+                var userId = $('#userId').val();
+                var host = window.location.hostname;
+                ws = new WebSocket("ws://" + host + ":8000/ws/transaction/create?userid=" + userId);
+                ws.onmessage = function(event) {
+                    var transactions = $('#transactions');
+                    var transaction = document.createElement('li')
+                    var content = document.createTextNode(event.data)
+                    transaction.appendChild(content)
+                    transactions.append(transaction);
+                };
+                event.preventDefault()
+            }
+            function sendMessage(event) {
+                var data = {
+                    amount: parseFloat($('#amount').val()),
+                    currency: $('#currency').val(),
+                    description: $('#description').val(),
+                    category: $('#category').val(),
+                    type: $('#type').val()
+                };
+                ws.send(JSON.stringify(data));
+
+                event.preventDefault()
+            }
+        </script>
+</body>
+</html>

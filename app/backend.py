@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from pydantic import BaseSettings
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from datetime import datetime
 
 
 class Settings(BaseSettings):
@@ -25,24 +26,7 @@ engine = sqlalchemy.create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-#
-# metadata = sqlalchemy.MetaData()
-#
-# transactions = sqlalchemy.Table(
-#     "transactions",
-#     metadata,
-#     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
-#     sqlalchemy.Column("amount", sqlalchemy.Numeric, nullable=False),
-#     sqlalchemy.Column("currency", sqlalchemy.String, nullable=False),
-#     sqlalchemy.Column("timestamp", sqlalchemy.DateTime(timezone=True), nullable=False, default=sqlalchemy.func.now()),
-#     sqlalchemy.Column("description", sqlalchemy.String, nullable=True),
-#     sqlalchemy.Column("category", sqlalchemy.String, nullable=False),
-#     sqlalchemy.Column("type", sqlalchemy.String, nullable=False),
-#     sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False),
-# )
-#
-# metadata.drop_all(engine)
-# metadata.create_all(engine)
+Base.metadata.create_all(bind=engine)
 
 
 class TransactionIn(BaseModel):
@@ -69,7 +53,21 @@ class Transaction(Base):
     user_id = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     type = sqlalchemy.Column(sqlalchemy.String, nullable=False)
 
-def createTransaction(db: Session, transaction: TransactionIn):
+
+class TransactionOut(BaseModel):
+    id: int
+    amount: float
+    currency: str
+    timestamp: datetime
+    description: str
+    category: str
+    user_id: str
+    type: str
+
+    class Config:
+        orm_mode = True
+
+def create_transaction(db: Session, transaction: TransactionIn):
     db_tran = Transaction(amount = transaction.amount,
                           currency = transaction.currency,
                           description = transaction.description,
@@ -80,3 +78,26 @@ def createTransaction(db: Session, transaction: TransactionIn):
     db.commit()
     db.refresh(db_tran)
     return db_tran
+
+
+def get_transaction(db: Session, transaction_id: int):
+    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    return transaction
+
+
+def get_transactions_for_user(db: Session, user_id: str):
+    transactions = db.query(Transaction).filter(Transaction.user_id == user_id).all()
+    return transactions
+
+
+def get_transactions_for_user_by_type(db: Session, user_id: str, type: str):
+    transactions = db.query(Transaction).filter(Transaction.user_id == user_id, Transaction.type == type).all()
+    return transactions
+
+
+def get_transactions_by_amount(db:Session, amount: float, currency: str, user_id: str):
+    transaction = db.query(Transaction).filter(Transaction.amount >= amount,
+                                               Transaction.amount <= amount,
+                                               Transaction.currency == currency,
+                                               Transaction.user_id == user_id).all()
+    return transaction

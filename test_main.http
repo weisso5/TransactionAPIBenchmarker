@@ -73,7 +73,7 @@ content-type: application/json
 > {%
 
 client.test("Request executed successfully", function() {
-  client.assert(response.status === 200, "Response status is not 200");
+  client.assert(response.status === 201, "Response status is not 201, received " + response.status);
 });
 
 client.test("Response content-type is json", function() {
@@ -83,6 +83,29 @@ client.test("Response content-type is json", function() {
 
 client.test("id option exists", function() {
   client.assert(response.body.hasOwnProperty("id"), "Cannot find 'id' option in response");
+});
+
+client.global.set("transactionId", response.body.id);
+%}
+
+### Test Get Transaction
+GET http://127.0.0.1:8000/transaction/query/id/{{transactionId}}
+accept: application/json
+content-type: application/json
+
+> {%
+
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+
+client.test("Response content-type is json", function() {
+  var type = response.contentType.mimeType;
+  client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+});
+
+client.test("results option exists", function() {
+  client.assert(response.body.hasOwnProperty("results"), "Cannot find 'results' option in response");
 });
 
 %}
