@@ -8,7 +8,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.backend import TransactionIn, DATABASE_URL, SessionLocal, create_transaction, get_transaction, \
+from app.backend import TransactionIn, SessionLocal, create_transaction, get_transaction, \
     TransactionOut, get_transactions_for_user, get_transactions_for_user_by_type, get_transactions_by_amount, \
     get_transactions_by_currency, get_transactions_by_amount_range, get_transactions_by_category, \
     get_transactions_by_date_range
@@ -38,14 +38,11 @@ def get_db():
 @app.on_event("startup")
 async def startup():
     print("Starting up")
-    print(DATABASE_URL)
-    #await database.connect()
 
 
 @app.on_event("shutdown")
 async def shutdown():
     print("Shutting down")
-    #await database.disconnect()
 
 
 @app.get("/", description="Generates a login token")
