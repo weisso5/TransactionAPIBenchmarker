@@ -5,6 +5,7 @@ import uuid
 from fastapi import FastAPI, Response, Header, HTTPException, Depends, status, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.backend import TransactionIn, DATABASE_URL, SessionLocal, create_transaction, get_transaction, \
@@ -71,6 +72,12 @@ async def app_root():
     template = open(p.absolute(), "r").read()
     return HTMLResponse(template)
 
+@app.get("/app/view", summary="Get List View" , description="returns List View")
+async def app_view():
+    p = Path("/code/app/templates/transactionViewer.html")
+    template = open(p.absolute(), "r").read()
+    return HTMLResponse(template)
+
 @app.post("/transaction/", status_code=status.HTTP_201_CREATED,
           summary="Create a new transaction",
           description="Create a new transaction with amount, currency, user_id, type, description, and category")
@@ -134,10 +141,7 @@ async def websocket_endpoint(websocket: WebSocket,userid: str = Depends(ws_get_u
             transaction = TransactionIn(user_id=userid, amount=float(data["amount"]), currency=data["currency"],
                                         type=data["type"], description=data["description"], category=data["category"])
             rst = create_transaction(db, transaction)
-            await websocket.send_json({"id": rst.id, "userId": rst.user_id,
-                                       "timestamp": rst.timestamp.isoformat(),
-                                       "type":rst.type, "amount": rst.amount,
-                                       "currency": rst.currency})
+            await websocket.send_json(jsonable_encoder(rst))
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
 
@@ -151,13 +155,13 @@ async def websocket_flow(websocket: WebSocket,userid: str = Depends(ws_get_useri
             query = await websocket.receive_json()
             if query["action"] == "get":
                 rst = get_transactions_for_user(db, userid)
-                await websocket.send_json({"action": "get", "results": rst})
+                await websocket.send_json({"action": "get", "results": jsonable_encoder(rst)})
             elif query["action"] == "get_by_type":
                 rst = get_transactions_for_user_by_type(db, userid, query["type"])
-                await websocket.send_json({"action": "get_by_type", "results": rst})
+                await websocket.send_json({"action": "get_by_type", "results": jsonable_encoder(rst)})
             elif query["action"] == "get_by_amount":
                 rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
-                await websocket.send_json({"action": "get_by_amount", "results": rst})
+                await websocket.send_json({"action": "get_by_amount", "results": jsonable_encoder(rst)})
             else:
                 await websocket.send_json({"action": "error", "message": "Unknown action"})
 

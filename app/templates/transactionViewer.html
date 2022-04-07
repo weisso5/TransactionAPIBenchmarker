@@ -35,28 +35,174 @@
                     class="form-control"
                     id="userId"
                     placeholder="User Id"
-                    type="text"
-                    value="some-key-token"/>
+                    required
+                    type="text" value=""/>
         </div>
+        <br/>
         <div id="connectArea">
             <button class="btn btn-primary" onclick="connect(event)">Connect</button>
             <span class="badge bg-success" id="isconnected" style="display: none;">Connected</span>
             <span class="badge bg-danger" id="isdisconnected">Disconnected</span>
         </div>
     </div>
+    <div class="row">
+        <div class="mb-3">
+            <label class="form-label" for="action">Action</label>
+            <select class="form-control" id="action">
+                <option selected value="get">Get</option>
+                <option value="get_by_type">Get By Transaction Type</option>
+                <option value="get_by_amount">Get By Amount</option>
+            </select>
+            <br/>
+            <button class="btn btn-primary" id="btnAction" onclick="send(event)" type="button">Fetch</button>
+            <div class="mb-4">
+                <div class="mb-3" id="paramsType" style="display: none">
+                    <label class="form-label" for="type">Transaction Type</label>
+                    <select class="form-select" id="type" required>
+                        <option selected value="debit">Debit</option>
+                        <option value="credit">Credit</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="paramsAmount" style="display: none">
+                    <label class="form-label" for="amount">Amount</label>
+                    <input
+                            aria-label="Amount"
+                            autocomplete="on"
+                            class="form-control"
+                            id="amount"
+                            min="0.00"
+                            required
+                            step="0.01"
+                            type="number"
+                    /> <label class="form-label" for="currency">Currency </label>
+                    <select
+                            aria-label="Select Currency"
+                            class="form-select"
+                            id="currency"
+                            required>
+                        <option selected value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="JPY">JPY</option>
+                        <option value="CAD">CAD</option>
+                        <option value="AUD">AUD</option>
+                        <option value="NZD">NZD</option>
+                        <option value="CHF">CHF</option>
+                        <option value="HKD">HKD</option>
+                        <option value="SGD">SGD</option>
+                        <option value="SEK">SEK</option>
+                    </select>
+                </div>
+                <script>
+                    $('#action').change(function () {
+                        if ($(this).val() === 'get_by_type') {
+                            $('#paramsType').show();
+                            $('#paramsAmount').hide();
+                        } else if ($(this).val() === 'get_by_amount') {
+                            $('#paramsType').hide();
+                            $('#paramsAmount').show();
+                        } else {
+                            $('#paramsType').hide();
+                            $('#paramsAmount').hide();
+                        }
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
     <hr/>
     <div class="row">
         <div class="col-md-12">
-
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Transaction Id</th>
+                    <th scope="col">User Id</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Currency</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Timestamp</th>
+                </tr>
+                </thead>
+                <tbody id="transactionTable">
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 <script>
     var ws = null;
     var host = window.location.hostname;
-    var userId = $("#userId").val();
-    ws = new WebSocket("ws://" + host + ":8000/ws/transaction/flow?userid=" + userId);
-    
+
+    function connect(event) {
+        var userId = $("#userId").val();
+        if (userId === "") {
+            alert("Please enter user id");
+            return;
+        }
+        ws = new WebSocket("ws://" + host + ":8000/ws/transaction/flow?userid=" + userId);
+        ws.onopen = function (event) {
+            $("#isconnected").show();
+            $("#isdisconnected").hide();
+        };
+        ws.onclose = function (event) {
+            $("#isconnected").hide();
+            $("#isdisconnected").show();
+        };
+        ws.onerror = function (event) {
+            $("#isconnected").hide();
+            $("#isdisconnected").show();
+            alert("Error: " + event.data);
+        };
+        ws.onmessage = function (event) {
+            var data = JSON.parse(event.data);
+            var transactions = data.results;
+            var count = 1;
+            var rows = transactions.map(function (transaction) {
+                var row = "<tr " + (transaction.type === "debit" ? "class='table-secondary'" : "class='table-primary'") + " id='" + transaction.id + "'>";
+                row += "<th scope=\"row\">" + count + "</th>";
+                row += "<td>" + transaction.id + "</td>";
+                row += "<td>" + transaction.user_id + "</td>";
+                row += "<td>" + transaction.amount + "</td>";
+                row += "<td>" + transaction.currency + "</td>";
+                row += "<td>" + transaction.description + "</td>";
+                row += "<td>" + transaction.category + "</td>";
+                row += "<td>" + transaction.type + "</td>";
+                row += "<td>" + transaction.timestamp + "</td>";
+                row += "</tr>";
+                count++;
+                return row
+            });
+            $("#transactionTable").html(rows);
+        };
+        event.preventDefault()
+    }
+
+    function send(event) {
+        var action = $("#action").val();
+        var userId = $("#userId").val();
+
+        var data = {
+            "action": action,
+            "userId": userId
+        };
+
+        if (action === "get_by_type") {
+            data.type = $("#type").val();
+        } else if (action === "get_by_amount") {
+            var amount = $("#amount").val();
+            var currency = $("#currency").val();
+            data.amount = amount;
+            data.currency = currency;
+        }
+
+        ws.send(JSON.stringify(data));
+        event.preventDefault()
+    }
+
 </script>
 </body>
 </html>
