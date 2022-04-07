@@ -101,3 +101,29 @@ def get_transactions_by_amount(db:Session, amount: float, currency: str, user_id
                                                Transaction.currency == currency,
                                                Transaction.user_id == user_id).all()
     return transaction
+
+
+def get_transactions_by_currency(db:Session, currency: str, user_id: str):
+    transaction = db.query(Transaction).filter(Transaction.currency == currency,
+                                               Transaction.user_id == user_id).all()
+    return transaction
+
+
+def get_transactions_by_amount_range(db:Session, amount_min: float, amount_max: float, currency: str, user_id: str):
+    transaction = db.query(Transaction).filter(Transaction.amount >= amount_min,
+                                               Transaction.amount <= amount_max,
+                                               Transaction.currency == currency,
+                                               Transaction.user_id == user_id).all()
+    return transaction
+
+def get_transactions_by_category(db:Session, category: str, user_id: str):
+    transaction = db.query(Transaction).filter(Transaction.category == category,
+                                               Transaction.user_id == user_id).all()
+    return transaction
+
+
+def get_transactions_by_date_range(db:Session, start_date: datetime, end_date: datetime, user_id: str):
+    transaction = db.query(Transaction).filter(Transaction.timestamp >= start_date,
+                                               Transaction.timestamp <= end_date,
+                                               Transaction.user_id == user_id).all()
+    return transaction

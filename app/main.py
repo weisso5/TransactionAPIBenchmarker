@@ -9,7 +9,9 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.backend import TransactionIn, DATABASE_URL, SessionLocal, create_transaction, get_transaction, \
-    TransactionOut, get_transactions_for_user, get_transactions_for_user_by_type, get_transactions_by_amount
+    TransactionOut, get_transactions_for_user, get_transactions_for_user_by_type, get_transactions_by_amount, \
+    get_transactions_by_currency, get_transactions_by_amount_range, get_transactions_by_category, \
+    get_transactions_by_date_range
 from app.functions import fib
 
 
@@ -145,7 +147,6 @@ async def websocket_endpoint(websocket: WebSocket,userid: str = Depends(ws_get_u
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
 
-
 @app.websocket("/ws/transaction/flow")
 async def websocket_flow(websocket: WebSocket,userid: str = Depends(ws_get_userid), db: Session = Depends(get_db)):
     await manager.connect(websocket)
@@ -162,6 +163,18 @@ async def websocket_flow(websocket: WebSocket,userid: str = Depends(ws_get_useri
             elif query["action"] == "get_by_amount":
                 rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
                 await websocket.send_json({"action": "get_by_amount", "results": jsonable_encoder(rst)})
+            elif query["action"] == "get_by_currency":
+                rst = get_transactions_by_currency(db, query["currency"], userid)
+                await websocket.send_json({"action": "get_by_currency", "results": jsonable_encoder(rst)})
+            elif query["action"] == "get_by_amount_range":
+                rst = get_transactions_by_amount_range(db, query["amount_min"], query["amount_max"], query["currency"], userid)
+                await websocket.send_json({"action": "get_by_amount_range", "results": jsonable_encoder(rst)})
+            elif query["action"] == "get_by_category":
+                rst = get_transactions_by_category(db, query["category"], userid)
+                await websocket.send_json({"action": "get_by_category", "results": jsonable_encoder(rst)})
+            elif query["action"] == "get_by_date_range":
+                rst = get_transactions_by_date_range(db, query["date_min"], query["date_max"], userid)
+                await websocket.send_json({"action": "get_by_date_range", "results": jsonable_encoder(rst)})
             else:
                 await websocket.send_json({"action": "error", "message": "Unknown action"})
 
