@@ -131,9 +131,35 @@ async def websocket_endpoint(websocket: WebSocket,userid: str = Depends(ws_get_u
         while True:
             data = await websocket.receive_json()
             print(data)
-            transaction = TransactionIn(user_id=userid, amount=data["amount"], currency=data["currency"],
+            transaction = TransactionIn(user_id=userid, amount=float(data["amount"]), currency=data["currency"],
                                         type=data["type"], description=data["description"], category=data["category"])
             rst = create_transaction(db, transaction)
-            await websocket.send_json(rst)
+            await websocket.send_json({"id": rst.id, "userId": rst.user_id,
+                                       "timestamp": rst.timestamp.isoformat(),
+                                       "type":rst.type, "amount": rst.amount,
+                                       "currency": rst.currency})
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket)
+
+
+@app.websocket("/ws/transaction/flow")
+async def websocket_flow(websocket: WebSocket,userid: str = Depends(ws_get_userid), db: Session = Depends(get_db)):
+    await manager.connect(websocket)
+
+    try:
+        while True:
+            query = await websocket.receive_json()
+            if query["action"] == "get":
+                rst = get_transactions_for_user(db, userid)
+                await websocket.send_json({"action": "get", "results": rst})
+            elif query["action"] == "get_by_type":
+                rst = get_transactions_for_user_by_type(db, userid, query["type"])
+                await websocket.send_json({"action": "get_by_type", "results": rst})
+            elif query["action"] == "get_by_amount":
+                rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
+                await websocket.send_json({"action": "get_by_amount", "results": rst})
+            else:
+                await websocket.send_json({"action": "error", "message": "Unknown action"})
+
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
