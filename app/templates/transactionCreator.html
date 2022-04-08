@@ -106,18 +106,18 @@
 <ul id="transactions"></ul>
 </div>
 <script>
-    var ws = null;
+    let ws = null;
 
     function connect(event) {
-        var userId = $("#userId").val();
-        var host = window.location.hostname;
+        const userId = $("#userId").val();
+        const host = window.location.hostname;
         ws = new WebSocket(
             "ws://" + host + ":8000/ws/transaction/create?userid=" + userId
         );
         ws.onmessage = function (event) {
-            var transactions = $("#transactions");
-            var transaction = document.createElement("li");
-            var content = document.createTextNode(event.data);
+            const transactions = $("#transactions");
+            const transaction = document.createElement("li");
+            const content = document.createTextNode(event.data);
             transaction.appendChild(content);
             transactions.append(transaction);
         };
@@ -141,7 +141,7 @@
     }
 
     function sendMessage(event) {
-        var data = {
+        const data = {
             amount: parseFloat($("#amount").val()),
             currency: $("#currency").val(),
             description: $("#description").val(),

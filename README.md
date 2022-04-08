@@ -3,6 +3,7 @@
 
 [![Docker Image CI](https://github.com/weisso5/TransactionAPIBenchmarker/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/weisso5/TransactionAPIBenchmarker/actions/workflows/docker-image.yml)
 [![CodeQL](https://github.com/weisso5/TransactionAPIBenchmarker/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/weisso5/TransactionAPIBenchmarker/actions/workflows/codeql-analysis.yml)
+[![Dependency Review](https://github.com/weisso5/TransactionAPIBenchmarker/actions/workflows/dependency-review.yml/badge.svg?branch=main)](https://github.com/weisso5/TransactionAPIBenchmarker/actions/workflows/dependency-review.yml)
 
 The main goals are:
 

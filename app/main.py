@@ -174,6 +174,7 @@ async def websocket_flow(websocket: WebSocket,userid: str = Depends(ws_get_useri
                 await websocket.send_json({"action": "get_by_date_range", "results": jsonable_encoder(rst)})
             else:
                 await websocket.send_json({"action": "error", "message": "Unknown action"})
-
+    except KeyError:
+        await websocket.send_json({"action": "error", "message": "Missing action or parameters"})
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
