@@ -23,7 +23,7 @@ The main goals are:
 
 * Python 3.6+
 * Docker
-* Docker Compose
+*  [Docker Compose](https://docs.docker.com/compose/install/)
 
 ## Getting Started (Run it)
 
@@ -61,7 +61,7 @@ or
 Open your browser at: <a href="http://127.0.0.1:8000/app/view" class="external-link" target="_blank">http://127.0.0.1:8000/app/view</a>.
 
 
-###Even better:
+### Even better:
 
 Open your browser at: <a href="http://127.0.0.1:8000/docs" class="external-link" target="_blank">http://127.0.0.1:8000/docs</a>.
 
