@@ -172,7 +172,16 @@
                             type="date"/>
                 </div>
             </div>
+                <div class="form-check">
+                    <input class="form-check-input" id="stream" type="checkbox" value="">
+                    <label class="form-check-label" for="stream">
+                        Stream Results (polling every 3 seconds)
+                    </label>
+                </div>
                 <button class="btn btn-primary" id="btnAction" type="submit">Fetch</button>
+                <div class="spinner-border text-success" role="status" id="status" style="display: none">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </form>
     </div>
     <hr/>
@@ -235,6 +244,7 @@
             alert("Error: " + event.data);
         };
         ws.onmessage = function (event) {
+            $('#status').fadeIn('fast').delay(1000).fadeOut('fast');
             const data = JSON.parse(event.data);
             const transactions = data.results;
             let count = 1;
@@ -254,6 +264,7 @@
                 return row
             });
             $("#transactionTable").html(rows);
+            //TODO - might be cool to only redraw new rows
         };
         event.preventDefault()
     }
@@ -265,7 +276,8 @@
 
         let data = {
             "action": action.val(),
-            "userId": userId
+            "userId": userId,
+            "stream": $("#stream").is(":checked")
         };
 
         $('#' + params).children('input[required],select[required]').each(function () {
@@ -273,6 +285,7 @@
         });
 
         ws.send(JSON.stringify(data));
+
         event.preventDefault()
     }
 

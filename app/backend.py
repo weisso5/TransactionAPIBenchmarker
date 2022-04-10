@@ -22,6 +22,7 @@ DATABASE_URL = f"postgresql+psycopg2://{settings.db_user}:{settings.db_password}
 engine = sqlalchemy.create_engine(
     DATABASE_URL,
     echo=True,
+
 )
 
 if not database_exists(engine.url):

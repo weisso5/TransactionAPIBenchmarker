@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import Optional, Dict, List
 import time
@@ -144,36 +145,47 @@ async def websocket_endpoint(websocket: WebSocket,userid: str = Depends(ws_get_u
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
 
+
+async def websocket_flow_execute(websocket: WebSocket, userid:str, db:Session, query: dict):
+
+    if query["action"] == "get":
+        rst = get_transactions_for_user(db, userid)
+        await websocket.send_json({"action": "get", "results": jsonable_encoder(rst)})
+    elif query["action"] == "get_by_type":
+        rst = get_transactions_for_user_by_type(db, userid, query["type"])
+        await websocket.send_json({"action": "get_by_type", "results": jsonable_encoder(rst)})
+    elif query["action"] == "get_by_amount":
+        rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
+        await websocket.send_json({"action": "get_by_amount", "results": jsonable_encoder(rst)})
+    elif query["action"] == "get_by_currency":
+        rst = get_transactions_by_currency(db, query["currency"], userid)
+        await websocket.send_json({"action": "get_by_currency", "results": jsonable_encoder(rst)})
+    elif query["action"] == "get_by_amount_range":
+        rst = get_transactions_by_amount_range(db, query["amount_min"], query["amount_max"], query["currency"], userid)
+        await websocket.send_json({"action": "get_by_amount_range", "results": jsonable_encoder(rst)})
+    elif query["action"] == "get_by_category":
+        rst = get_transactions_by_category(db, query["category"], userid)
+        await websocket.send_json({"action": "get_by_category", "results": jsonable_encoder(rst)})
+    elif query["action"] == "get_by_date_range":
+        rst = get_transactions_by_date_range(db, query["date_min"], query["date_max"], userid)
+        await websocket.send_json({"action": "get_by_date_range", "results": jsonable_encoder(rst)})
+    else:
+        await websocket.send_json({"action": "error", "message": "Unknown action"})
+
+
 @app.websocket("/ws/transaction/flow")
 async def websocket_flow(websocket: WebSocket,userid: str = Depends(ws_get_userid), db: Session = Depends(get_db)):
     await manager.connect(websocket)
 
+    query = await websocket.receive_json()
+    print(f"websocket_flow received: {query} from websocket {websocket}")
     try:
         while True:
-            query = await websocket.receive_json()
-            if query["action"] == "get":
-                rst = get_transactions_for_user(db, userid)
-                await websocket.send_json({"action": "get", "results": jsonable_encoder(rst)})
-            elif query["action"] == "get_by_type":
-                rst = get_transactions_for_user_by_type(db, userid, query["type"])
-                await websocket.send_json({"action": "get_by_type", "results": jsonable_encoder(rst)})
-            elif query["action"] == "get_by_amount":
-                rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
-                await websocket.send_json({"action": "get_by_amount", "results": jsonable_encoder(rst)})
-            elif query["action"] == "get_by_currency":
-                rst = get_transactions_by_currency(db, query["currency"], userid)
-                await websocket.send_json({"action": "get_by_currency", "results": jsonable_encoder(rst)})
-            elif query["action"] == "get_by_amount_range":
-                rst = get_transactions_by_amount_range(db, query["amount_min"], query["amount_max"], query["currency"], userid)
-                await websocket.send_json({"action": "get_by_amount_range", "results": jsonable_encoder(rst)})
-            elif query["action"] == "get_by_category":
-                rst = get_transactions_by_category(db, query["category"], userid)
-                await websocket.send_json({"action": "get_by_category", "results": jsonable_encoder(rst)})
-            elif query["action"] == "get_by_date_range":
-                rst = get_transactions_by_date_range(db, query["date_min"], query["date_max"], userid)
-                await websocket.send_json({"action": "get_by_date_range", "results": jsonable_encoder(rst)})
-            else:
-                await websocket.send_json({"action": "error", "message": "Unknown action"})
+            await asyncio.sleep(3)
+            await websocket_flow_execute(websocket, userid, db, query)
+            if query["stream"] is None and query["stream"] is False:
+                break
+
     except KeyError:
         await websocket.send_json({"action": "error", "message": "Missing action or parameters"})
     except WebSocketDisconnect:
