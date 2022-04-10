@@ -10,13 +10,12 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=requests
-      - PG_DATA=/var/lib/postgresql/data
+      - PGDATA=/var/lib/postgresql/data/
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-      - ./data/postgres/tmp:/var/lib/postgresql/tmp
-      - ./data/postgres/log:/var/log/postgresql
+      - db-data:/var/lib/postgresql/data
+      - db-tmp:/var/lib/postgresql/tmp
     restart: always
-    command: postgres -c logging_collector=on -c log_connections=yes -c log_destination='stderr' -c log_directory=/var/log/postgresql -c stats_temp_directory=/var/lib/postgresql/tmp
+    command: postgres -c logging_collector=on -c log_connections=yes -c log_destination='stderr' -c stats_temp_directory=/var/lib/postgresql/tmp
     networks:
       - requestsstack
     healthcheck:
@@ -37,7 +36,9 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+          
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -47,8 +48,10 @@ services:
     links:
       - db
 volumes:
-  db:
-    driver: local
+  db-data:
+    name: db-data
+  db-tmp:
+    name: db-tmp
 networks:
   requestsstack:
     driver: bridge

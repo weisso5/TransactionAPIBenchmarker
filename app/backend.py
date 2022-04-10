@@ -1,4 +1,5 @@
 import sqlalchemy
+from sqlalchemy_utils import database_exists, create_database
 from pydantic import BaseModel
 from pydantic import BaseSettings
 from sqlalchemy.ext.declarative import declarative_base
@@ -23,10 +24,14 @@ engine = sqlalchemy.create_engine(
     echo=True,
 )
 
+if not database_exists(engine.url):
+    create_database(engine.url)
+    print("Database created")
+else:
+    print("Database exists")
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-Base.metadata.create_all(bind=engine)
-
 
 class TransactionIn(BaseModel):
     amount: float
@@ -65,6 +70,9 @@ class TransactionOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+Base.metadata.create_all(bind=engine)
+
 
 def create_transaction(db: Session, transaction: TransactionIn):
     db_tran = Transaction(amount = transaction.amount,
