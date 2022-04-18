@@ -81,34 +81,46 @@ async def app_view():
 @app.post("/transaction/", status_code=status.HTTP_201_CREATED,
           summary="Create a new transaction",
           description="Create a new transaction with amount, currency, user_id, type, description, and category")
-async def create(transaction: TransactionIn, db: Session = Depends(get_db)):
-
+async def create(transaction: TransactionIn,response: Response, db: Session = Depends(get_db)):
+    start_time = time.process_time()
     rst = create_transaction(db, transaction)
-
+    process_time = round((time.process_time() - start_time) * 1000, 2)
+    response.headers["X-ProcessingTime"] = f"{process_time}ms"
     return {"id": rst.id, "userId": rst.user_id, "amount": rst.amount, "timestamp": rst.timestamp}
 
 
 @app.get("/transaction/query/id/{id}", response_model=TransactionOut, summary="Query transaction by id")
-async def query_id(id: int, db: Session = Depends(get_db)):
+async def query_id(id: int,response: Response, db: Session = Depends(get_db)):
+    start_time = time.process_time()
     rst = get_transaction(db, id)
+    process_time = round((time.process_time() - start_time) * 1000, 2)
+    response.headers["X-ProcessingTime"] = f"{process_time}ms"
     if rst is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return rst
 
 
 @app.get("/transaction/query/userId/{userId}", response_model=List[TransactionOut], summary="Query transaction by userId and optionally type")
-async def query_userId(userId: str, type: Optional[str] = None, db: Session = Depends(get_db)):
+async def query_userId(userId: str, type: Optional[str] = None, db: Session = Depends(get_db), response: Response = Response ):
+    start_time = time.process_time()
+
     if type is None:
         rst = get_transactions_for_user(db, userId)
     else:
         rst = get_transactions_for_user_by_type(db, userId, type)
+
+    process_time = round((time.process_time() - start_time) * 1000, 2)
+    response.headers["X-ProcessingTime"] = f"{process_time}ms"
     return rst
 
 
 @app.get("/transaction/query/userId/{userId}/amount/{amount}/currency/{currency}",
          response_model=List[TransactionOut], summary="Query transaction by userId and amount and currency")
-async def query_userId_amount(userId: str, amount: float, currency: str, db: Session = Depends(get_db)):
+async def query_userId_amount(userId: str, amount: float, currency: str,response: Response, db: Session = Depends(get_db)):
+    start_time = time.process_time()
     rst = get_transactions_by_amount(db, amount, currency, userId)
+    process_time = round((time.process_time() - start_time) * 1000, 2)
+    response.headers["X-ProcessingTime"] = f"{process_time}ms"
     return rst
 
 
@@ -136,39 +148,50 @@ async def websocket_endpoint(websocket: WebSocket,userid: str = Depends(ws_get_u
 
     try:
         while True:
+            start_time = time.process_time()
             data = await websocket.receive_json()
             print(data)
             transaction = TransactionIn(user_id=userid, amount=float(data["amount"]), currency=data["currency"],
                                         type=data["type"], description=data["description"], category=data["category"])
             rst = create_transaction(db, transaction)
+            process_time = round((time.process_time() - start_time) * 1000, 2)
+            rst.processing_time = f"{process_time}ms"
             await websocket.send_json(jsonable_encoder(rst))
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
 
 
 async def websocket_flow_execute(websocket: WebSocket, userid:str, db:Session, query: dict):
+    start_time = time.process_time()
 
     if query["action"] == "get":
         rst = get_transactions_for_user(db, userid)
-        await websocket.send_json({"action": "get", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     elif query["action"] == "get_by_type":
         rst = get_transactions_for_user_by_type(db, userid, query["type"])
-        await websocket.send_json({"action": "get_by_type", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get_by_type", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     elif query["action"] == "get_by_amount":
         rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
-        await websocket.send_json({"action": "get_by_amount", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get_by_amount", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     elif query["action"] == "get_by_currency":
         rst = get_transactions_by_currency(db, query["currency"], userid)
-        await websocket.send_json({"action": "get_by_currency", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get_by_currency", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     elif query["action"] == "get_by_amount_range":
         rst = get_transactions_by_amount_range(db, query["amount_min"], query["amount_max"], query["currency"], userid)
-        await websocket.send_json({"action": "get_by_amount_range", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get_by_amount_range", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     elif query["action"] == "get_by_category":
         rst = get_transactions_by_category(db, query["category"], userid)
-        await websocket.send_json({"action": "get_by_category", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get_by_category", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     elif query["action"] == "get_by_date_range":
         rst = get_transactions_by_date_range(db, query["date_min"], query["date_max"], userid)
-        await websocket.send_json({"action": "get_by_date_range", "results": jsonable_encoder(rst)})
+        process_time = round((time.process_time() - start_time) * 1000, 2)
+        await websocket.send_json({"action": "get_by_date_range", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"})
     else:
         await websocket.send_json({"action": "error", "message": "Unknown action"})
 
