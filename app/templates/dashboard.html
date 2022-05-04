@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <title>Dashboard</title>
+        <link
+            crossorigin="anonymous"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+            integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+            rel="stylesheet"
+    />
+    <script
+            crossorigin="anonymous"
+            integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery.min.js@3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js" integrity="sha256-ErZ09KkZnzjpqcane4SCyyHsKAXMvID9/xwbl/Aq1pc=" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        const dashboard = {
+            userId : '{{requestor.id}}',
+            ws : null,
+            host : window.location.hostname,
+            port : 8000,
+            self : false,
+            loadingData : false,
+
+            init : function() {
+                self = this;
+                this.ws = new WebSocket('ws://' + self.host + ':' + self.port + '/ws/transaction/flow?userid=" + userId');
+                this.ws.onopen = function() {
+                    console.log('Connected to server');
+                    self.setConnectionBadge(true);
+                };
+                this.ws.onerror = function (evt) {
+                    alert("Error: " + evt.data);
+                    self.setConnectionBadge(false);
+                };
+                this.ws.onmessage = function(event) {
+                    $('#loading').fadeIn('fast').delay(1000).fadeOut('fast');
+                    var data = JSON.parse(event.data);
+                    const transactions = data.results;
+                    const toAdd = transactions.filter(function(transaction) {
+                        return !self.transactionRowExists(transaction.id);
+                    });
+                    existingCount = $('#transaction-table tr').length;
+                    toAdd.forEach(function(transaction) {
+                        self.addTransactionRow(++existingCount,transaction);
+                    });
+                };
+                this.ws.onclose = function() {
+                    console.log('Disconnected from server');
+                    self.setConnectionBadge(false);
+                };
+
+                $('#actions').on('click', 'a', function() {
+                    const action = $(this).data("params");
+
+                    self.showParams(action);
+                });
+            },
+            loadData : function (event) {
+                if (this.loadingData) {
+                    return;
+                }
+                this.loadingData = true;
+                let action = $('#actions').find('a.active');
+                const params = action.data("params");
+                action = action.data("value")
+                let data = {
+                    action : action,
+                    "userId" : this.userId,
+                    "stream" : true
+                };
+
+                $('#' + params).children('input[required],select[required]').each(function () {
+                    data[$(this).attr('id').replace(params,'').replace('.','').trim()] = $(this).val();
+                });
+
+                this.ws.send(JSON.stringify(data));
+                //event.preventDefault();
+            },
+            setConnectionBadge : function(connected) {
+                if (connected) {
+                    $('#connection-badge').removeClass('bg-danger').addClass('bg-success');
+                } else {
+                    $('#connection-badge').removeClass('bg-success').addClass('bg-danger');
+                }
+            },
+            transactionRowExists: function(transactionId) {
+                return $('#tran-' + transactionId).length > 0;
+            },
+            mapTransactionRow  : function (count, transaction) {
+                let row = "<tr " + (transaction.type === "debit" ? "class='table-secondary'" : "class='table-primary'") + " id=tran-'" + transaction.id + "'>";
+                row += "<th scope=\"row\">" + count + "</th>";
+                row += "<td>" + transaction.id + "</td>";
+                row += "<td>" + transaction.user_id + "</td>";
+                row += "<td>" + transaction.amount + "</td>";
+                row += "<td>" + transaction.currency + "</td>";
+                row += "<td>" + transaction.description + "</td>";
+                row += "<td>" + transaction.category + "</td>";
+                row += "<td>" + transaction.type + "</td>";
+                row += "<td>" + transaction.timestamp + "</td>";
+                row += "</tr>";
+                return row;
+            },
+            showParams : function(params) {
+                $('.params').hide();
+                $('.params').find('input,select').attr('required', false);
+                var o = $('#' + params);
+                $(o).show();
+                $(o).find('input,select').attr('required', true);
+            },
+
+            paramsContainer : function(id, labelKey,label, innerHtml) {
+               let row = `<div class="mb-3 params" id="${id}>`;
+               row += `<label class="form-label" for="${id}.${labelKey}">${label}</label>`;
+               row += innerHtml;
+               row += "</div>";
+               return row;
+            }
+
+        };
+
+    </script>
+</head>
+<body>
+<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+  <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">Nothing LLC</a>
+  <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+	<span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="navbar-nav">
+    <div class="nav-item">
+      <span class="position-absolute bottom-0 start-75 translate-middle p-2 bg-danger border border-light rounded-circle" id="connection-badge">
+        <span class="visually-hidden">Connection Status</span>
+    </span>
+    </div>
+	<div class="nav-item text-nowrap">
+        <a class="nav-link px-3" href="#">Welcome {{requestor.name}}
+        </a>
+	</div>
+  </div>
+</header>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="#">
+              <span data-feather="home"></span>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/app/addtransaction">
+              <span data-feather="file"></span>
+              Creator
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#transactions">
+              <span data-feather="shopping-cart"></span>
+              All Transactions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="users"></span>
+              All Users
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="bar-chart-2"></span>
+              Reports
+            </a>
+          </li>
+        </ul>
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Saved Queries</span>
+                    <a class="d-flex align-items-center text-muted" href="#" aria-label="Add a new query">
+                        <span data-feather="plus-circle"></span>
+                        </a>
+                    <ul class="nav flex-column mb-2" id="savedQueries">
+                    </ul>
+                </h6>
+            </div>
+        </nav>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Dashboard <div class="spinner-border text-primary" role="status" id="loading" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+        </div></h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-4">
+            <div class="dropdown">
+              <button class="btn btn-primary dropdown-toggle" type="button" id="dataMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                Data View
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="dataMenu" id="actions">
+                  <li><span class="dropdown-item-text">Select Data Query</span></li>
+                <li ><a class="dropdown-item active" href="#" data-value="get" data-params="paramsGet">Get</a></li>
+                <li ><a class="dropdown-item" href="#" data-value="get_by_type" data-params="paramsType">Get By Transaction Type</a></li>
+                <li ><a data-value="get_by_amount" data-params="paramsAmount">Get By Amount</a></li>
+                <li ><a data-value="get_by_currency" data-params="paramsCurrency">Get By Currency</a></li>
+                <li ><a data-value="get_by_amount_range" data-params="paramsAmountRange">Get By Amount Range</a></li>
+                <li ><a data-value="get_by_category" data-params="paramsCategory">Get By Category</a></li>
+                <li ><a data-value="get_by_date_range" data-params="paramsDateRange">Get By Date Range</a></li>
+              </ul>
+            </div>
+                <button type="button" class="btn btn-sm btn-success" onclick="dashboard.loadData();">Load</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+            </div>
+        </div>
+      </div>
+        <canvas class="my-4 w-100" id="chart" width="900" height="380"></canvas>
+        <h2>Transactions</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-sm" id="transactions">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Currency</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-body">
+                    </tbody>
+
+                </table>
+            </div>
+        </main>
+
+    </div>
+
+
+</div>
+<script>
+
+    $.when($.ready).then(function (data){
+       dashboard.init();
+    });
+
+</script>
+
+</body>
+</html>

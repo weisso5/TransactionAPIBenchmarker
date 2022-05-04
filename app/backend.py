@@ -3,7 +3,7 @@ from sqlalchemy_utils import database_exists, create_database
 from pydantic import BaseModel
 from pydantic import BaseSettings
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 from datetime import datetime
 
 
@@ -49,14 +49,16 @@ class TransactionIn(BaseModel):
 class Transaction(Base):
     __tablename__ = "transactions"
 
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True, index=True)
     amount = sqlalchemy.Column(sqlalchemy.Numeric, nullable=False)
     currency = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     timestamp = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), nullable=False, default=sqlalchemy.func.now())
     description = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     category = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    user_id = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+    user_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("users.id"), nullable=False, index=True)
     type = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+
+    user = relationship("User", back_populates="transactions")
 
 
 class TransactionOut(BaseModel):
@@ -71,6 +73,37 @@ class TransactionOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class UserIn(BaseModel):
+
+    name: str
+    email: str
+
+    class Config:
+        orm_mode = True
+
+
+class UserOut(BaseModel):
+    id: str
+    name: str
+    email: str
+    timestamp: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, index=True)
+    name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+    email = sqlalchemy.Column(sqlalchemy.String, nullable=False, index=True)
+    timestamp = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), nullable=False, default=sqlalchemy.func.now())
+
+    transactions = relationship("Transaction", back_populates="user")
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -135,3 +168,27 @@ def get_transactions_by_date_range(db:Session, start_date: datetime, end_date: d
                                                Transaction.timestamp <= end_date,
                                                Transaction.user_id == user_id).all()
     return transaction
+
+
+def user_exists(db: Session, user_email: str):
+    return db.query(User).filter(User.email == user_email).first() is not None
+
+
+def valid_user(db:Session, user_token: str):
+    return db.query(User).filter(User.id == user_token).first() is not None
+
+
+def get_user(db: Session, user_email: str):
+    return db.query(User).filter(User.email == user_email).first()
+
+
+def get_user_by_id(db: Session, user_id: str):
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def create_user(db: Session, id: str, u : UserIn):
+    db_user = User(id = id,name= u.name, email = u.email)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
