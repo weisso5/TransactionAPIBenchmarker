@@ -18,6 +18,13 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery.min.js@3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js" integrity="sha256-ErZ09KkZnzjpqcane4SCyyHsKAXMvID9/xwbl/Aq1pc=" crossorigin="anonymous"></script>
     <script type="text/javascript">
+        const groupBy = function (xs, key) {
+            return xs.reduce(function (rv, x) {
+                (rv[x[key]] = rv[x[key]] || []).push(x);
+                return rv;
+            }, {});
+        };
+
         const dashboard = {
             userId : '{{requestor.id}}',
             ws : null,
@@ -25,13 +32,15 @@
             port : 8000,
             self : false,
             loadingData : false,
+            chart : null,
 
             init : function() {
                 self = this;
-                this.ws = new WebSocket('ws://' + self.host + ':' + self.port + '/ws/transaction/flow?userid=" + userId');
+                this.ws = new WebSocket('ws://' + self.host + ':' + self.port + '/ws/transaction/flow?userid=' + self.userId);
                 this.ws.onopen = function() {
                     console.log('Connected to server');
                     self.setConnectionBadge(true);
+                    self.initChart()
                 };
                 this.ws.onerror = function (evt) {
                     alert("Error: " + evt.data);
@@ -39,14 +48,34 @@
                 };
                 this.ws.onmessage = function(event) {
                     $('#loading').fadeIn('fast').delay(1000).fadeOut('fast');
-                    var data = JSON.parse(event.data);
+                    let data = JSON.parse(event.data);
                     const transactions = data.results;
                     const toAdd = transactions.filter(function(transaction) {
                         return !self.transactionRowExists(transaction.id);
                     });
-                    existingCount = $('#transaction-table tr').length;
+                    let existingCount = $('#transaction-body tr').length;
                     toAdd.forEach(function(transaction) {
-                        self.addTransactionRow(++existingCount,transaction);
+                        $('#transactions tbody').append(self.mapTransactionRow(++existingCount,transaction));
+
+                        self.addChartLabel(transaction.date);
+
+                    });
+
+                    const tranGroups = groupBy(transactions, 'type');
+                    const tgMapped = Object.keys(tranGroups).map(key => {
+
+                         return {
+                            type: key,
+                            data: tranGroups[key].reduce((r,t)=>{
+                                r.push(t.amount);
+                                return r;
+                                },[])
+                         };
+
+                    });
+
+                    tgMapped.forEach(tgm => {
+                        self.addChartDataset(tgm.type,tgm.data,tgm.type);
                     });
                 };
                 this.ws.onclose = function() {
@@ -58,6 +87,35 @@
                     const action = $(this).data("params");
 
                     self.showParams(action);
+                });
+            },
+            initChart: function (){
+                const ctx = document.getElementById('chart').getContext('2d');
+                self.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [
+                        ],
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                min: 0
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Transactions Chart'
+                            }
+                        }
+                    }
                 });
             },
             loadData : function (event) {
@@ -92,8 +150,8 @@
                 return $('#tran-' + transactionId).length > 0;
             },
             mapTransactionRow  : function (count, transaction) {
-                let row = "<tr " + (transaction.type === "debit" ? "class='table-secondary'" : "class='table-primary'") + " id=tran-'" + transaction.id + "'>";
-                row += "<th scope=\"row\">" + count + "</th>";
+                let row = "<tr " + (transaction.type === "debit" ? "class='table-secondary'" : "class='table-primary'") + " id=tran-" + transaction.id + ">";
+                row += "<td>" + count + "</td>";
                 row += "<td>" + transaction.id + "</td>";
                 row += "<td>" + transaction.user_id + "</td>";
                 row += "<td>" + transaction.amount + "</td>";
@@ -113,14 +171,168 @@
                 $(o).find('input,select').attr('required', true);
             },
 
+            innerParams : function (key) {
+                switch (key) {
+                    case "paramsType":
+                    return `<div className="mb-3 params" id="paramsType" style="display: none">
+                        <label className="form-label" htmlFor="paramsType.type">Transaction Type</label>
+                        <select className="form-select" id="paramsType.type">
+                            <option selected value="debit">Debit</option>
+                            <option value="credit">Credit</option>
+                        </select>
+                    </div>`
+                    case "paramsAmount":
+                    return `<div class="mb-3 params" id="paramsAmount" style="display: none">
+                    <label class="form-label" for="paramsAmount.amount">Amount</label>
+                    <input
+                            aria-label="Amount"
+                            autocomplete="on"
+                            class="form-control"
+                            id="paramsAmount.amount"
+                            min="0.00"
+
+                            step="0.01"
+                            type="number"
+                    /> <label class="form-label" for="paramsAmount.currency">Currency </label>
+                    <select
+                            aria-label="Select Currency"
+                            class="form-select"
+                            id="paramsAmount.currency"
+                            >
+                        <option selected value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="JPY">JPY</option>
+                        <option value="CAD">CAD</option>
+                        <option value="AUD">AUD</option>
+                        <option value="NZD">NZD</option>
+                        <option value="CHF">CHF</option>
+                        <option value="HKD">HKD</option>
+                        <option value="SGD">SGD</option>
+                        <option value="SEK">SEK</option>
+                    </select>
+                </div>`;
+                    case "paramsCurrency":
+                        return `<div class="mb-3 params" id="paramsCurrency" style="display: none;">
+                    <label class="form-label" for="paramsCurrency.currency">Currency</label>
+                    <select
+                            aria-label="Select Currency"
+                            class="form-select"
+                            id="paramsCurrency.currency"
+                            >
+                        <option selected value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="JPY">JPY</option>
+                        <option value="CAD">CAD</option>
+                        <option value="AUD">AUD</option>
+                        <option value="NZD">NZD</option>
+                        <option value="CHF">CHF</option>
+                        <option value="HKD">HKD</option>
+                        <option value="SGD">SGD</option>
+                        <option value="SEK">SEK</option>
+                    </select>
+                </div>`;
+                    case "paramsCategory":
+                        return `<div class="mb-3 params" id="paramsCategory" style="display: none">
+                    <label class="form-label" for="paramsCategory.category">Category</label>
+                    <input
+                            aria-label="Category"
+                            autocomplete="on"
+                            class="form-control"
+                            id="paramsCategory.category"
+
+                            type="text"
+                    />
+                </div>`;
+                    case "paramsAmountRange":
+                        return `<div class="mb-3 params" id="paramsAmountRange" style="display: none">
+                    <label class="form-label" for="paramsAmountRange.min">Min Amount</label>
+                    <input
+                            aria-label="Min Amount"
+                            autocomplete="on"
+                            class="form-control"
+                            id="paramsAmountRange.min"
+                            min="0.00"
+
+                            step="0.01"
+                            type="number"
+                    />
+                    <label class="form-label" for="paramsAmountRange.max">Max Amount</label>
+                    <input
+                            aria-label="Max Amount"
+                            autocomplete="on"
+                            class="form-control"
+                            id="paramsAmountRange.max"
+                            min="0.00"
+
+                            step="0.01"
+                            type="number"
+                    />
+                </div>`
+                    case "paramsDateRange":
+                        return `<div class="mb-3 params" id="paramsDateRange" style="display: none">
+                    <label class="form-label" for="paramsDateRange.min">Min Date</label>
+                    <input
+                            aria-label="Min Date"
+                            autocomplete="on"
+                            class="form-control"
+                            id="paramsDateRange.min"
+
+                            type="date"/>
+                    <label class="form-label" for="paramsDateRange.max">Max Date</label>
+                    <input
+                            aria-label="Max Date"
+                            autocomplete="on"
+                            class="form-control"
+                            id="paramsDateRange.max"
+
+                            type="date"/>
+                </div>`
+
+                }
+            },
+
             paramsContainer : function(id, labelKey,label, innerHtml) {
                let row = `<div class="mb-3 params" id="${id}>`;
                row += `<label class="form-label" for="${id}.${labelKey}">${label}</label>`;
                row += innerHtml;
                row += "</div>";
                return row;
-            }
+            },
 
+            addChartLabel : function(label) {
+                if (self.chart.data.labels.indexOf(label) === -1) {
+                    self.chart.data.labels.push(label);
+                }
+            },
+
+            addChartDataset : function(label,data, type) {
+                let dataset = {
+                    label: label,
+                    data: data,
+                    borderWidth: 1
+                };
+
+                if (type === "credit") {
+                    dataset.borderColor = "rgb(75,98,192)";
+                    dataset.backgroundColor = "rgba(75, 192, 192, 0.2)";
+                } else if (type === "debit") {
+                    dataset.borderColor = "rgba(255, 99, 132, 1)";
+                    dataset.backgroundColor = "rgba(255, 99, 132, 0.2)";
+                }
+
+                const existingDataset = self.chart.data.datasets.find(d => d.label === label);
+                if (!existingDataset) {
+                    self.chart.data.datasets.push(dataset);
+                } else {
+                    const idx = self.chart.data.datasets.indexOf(existingDataset);
+                    existingDataset.data = data;
+                    self.chart.data.datasets[idx] = existingDataset;
+                }
+
+                self.chart.update()
+            }
         };
 
     </script>
@@ -225,12 +437,13 @@
                         <tr>
                             <th>#</th>
                             <th>ID</th>
-                            <th>Date</th>
+                            <th>User Id</th>
                             <th>Amount</th>
                             <th>Currency</th>
                             <th>Description</th>
                             <th>Category</th>
                             <th>Type</th>
+                            <th>Date</th>
                         </tr>
                     </thead>
                     <tbody id="transactions-body">

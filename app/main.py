@@ -83,7 +83,7 @@ async def app_login(request: Request):
 @app.get("/app/dashboard", summary="Get Dashboard Page", description="returns Dashboard Page", response_class=HTMLResponse)
 async def app_dashboard(request: Request, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse("/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
     user = get_user_by_id(db, token)
 
     return templates.TemplateResponse("dashboard.html", {"request": request,"requestor": user})
@@ -92,14 +92,14 @@ async def app_dashboard(request: Request, token: Optional[str] = Cookie(None), d
 @app.get("/app/transactions", summary="Get Transactions Page", description="returns Transactions Page", response_class=HTMLResponse)
 async def app_transactions(request: Request, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse("/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
     user = get_user_by_id(db, token)
     return templates.TemplateResponse("transactions.html", {"request": request,"requestor": user})
 
 @app.get("/app/transactions/create", summary="Get Create Transaction Page", description="returns Create Transaction Page", response_class=HTMLResponse)
 async def add_transaction(request: Request, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse("/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
     user = get_user_by_id(db, token)
     return templates.TemplateResponse("add_transaction.html", {"request": request,"requestor": user})
 
@@ -107,7 +107,7 @@ async def add_transaction(request: Request, token: Optional[str] = Cookie(None),
 @app.get("/app/transactions/{transactionId}", summary="Get Transaction Page", description="returns Transaction Page", response_class=HTMLResponse)
 async def app_transaction(request: Request, transactionId: int, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse("/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
     user = get_user_by_id(db, token)
     return templates.TemplateResponse("transaction.html", {"request": request,"requestor": user})
 

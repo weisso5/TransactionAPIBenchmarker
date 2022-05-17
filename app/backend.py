@@ -121,53 +121,69 @@ def create_transaction(db: Session, transaction: TransactionIn):
     return db_tran
 
 
+def add_formatted_date(tran: Transaction):
+    tran.date = tran.timestamp.strftime("%m/%d/%Y")
+    tran.time = tran.timestamp.strftime("%H:%M:%S")
+    tran.timezone = tran.timestamp.strftime("%Z")
+    return tran
+
+
 def get_transaction(db: Session, transaction_id: int):
     transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    add_formatted_date(transaction)
     return transaction
 
 
 def get_transactions_for_user(db: Session, user_id: str):
     transactions = db.query(Transaction).filter(Transaction.user_id == user_id).all()
-    return transactions
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
 
 
 def get_transactions_for_user_by_type(db: Session, user_id: str, type: str):
     transactions = db.query(Transaction).filter(Transaction.user_id == user_id, Transaction.type == type).all()
-    return transactions
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
 
 
 def get_transactions_by_amount(db:Session, amount: float, currency: str, user_id: str):
-    transaction = db.query(Transaction).filter(Transaction.amount >= amount,
+    transactions = db.query(Transaction).filter(Transaction.amount >= amount,
                                                Transaction.amount <= amount,
                                                Transaction.currency == currency,
                                                Transaction.user_id == user_id).all()
-    return transaction
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
 
 
 def get_transactions_by_currency(db:Session, currency: str, user_id: str):
-    transaction = db.query(Transaction).filter(Transaction.currency == currency,
+    transactions = db.query(Transaction).filter(Transaction.currency == currency,
                                                Transaction.user_id == user_id).all()
-    return transaction
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
 
 
 def get_transactions_by_amount_range(db:Session, amount_min: float, amount_max: float, currency: str, user_id: str):
-    transaction = db.query(Transaction).filter(Transaction.amount >= amount_min,
+    transactions = db.query(Transaction).filter(Transaction.amount >= amount_min,
                                                Transaction.amount <= amount_max,
                                                Transaction.currency == currency,
                                                Transaction.user_id == user_id).all()
-    return transaction
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
+
 
 def get_transactions_by_category(db:Session, category: str, user_id: str):
-    transaction = db.query(Transaction).filter(Transaction.category == category,
+    transactions = db.query(Transaction).filter(Transaction.category == category,
                                                Transaction.user_id == user_id).all()
-    return transaction
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
 
 
 def get_transactions_by_date_range(db:Session, start_date: datetime, end_date: datetime, user_id: str):
-    transaction = db.query(Transaction).filter(Transaction.timestamp >= start_date,
+    transactions = db.query(Transaction).filter(Transaction.timestamp >= start_date,
                                                Transaction.timestamp <= end_date,
                                                Transaction.user_id == user_id).all()
-    return transaction
+    mapped = [add_formatted_date(tran) for tran in transactions]
+    return mapped
 
 
 def user_exists(db: Session, user_email: str):
