@@ -1,11 +1,9 @@
 import asyncio
-from pathlib import Path
 from typing import Optional, Dict, List
 import time
 import uuid
-import secrets
 from fastapi import FastAPI, Response, Header, HTTPException, Depends, status, WebSocket, WebSocketDisconnect, Query, \
-    responses, Form, Cookie, Request
+    responses, Form, Cookie, Request, Body
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.encoders import jsonable_encoder
@@ -16,7 +14,8 @@ from sqlalchemy.orm import Session
 from app.backend import TransactionIn, SessionLocal, create_transaction, get_transaction, \
     TransactionOut, get_transactions_for_user, get_transactions_for_user_by_type, get_transactions_by_amount, \
     get_transactions_by_currency, get_transactions_by_amount_range, get_transactions_by_category, \
-    get_transactions_by_date_range, UserIn, create_user, valid_user, get_user, user_exists, UserOut, get_user_by_id
+    get_transactions_by_date_range, UserIn, create_user, valid_user, get_user, user_exists, UserOut, get_user_by_id, \
+    create_transactions_for_user
 from app.functions import fib
 
 
@@ -143,6 +142,16 @@ async def create(transaction: TransactionIn, response: Response, db: Session = D
     process_time = round((time.process_time() - start_time) * 1000, 2)
     response.headers["X-ProcessingTime"] = f"{process_time}ms"
     return {"id": rst.id, "userId": rst.user_id, "amount": rst.amount, "timestamp": rst.timestamp, "processTime": f"{process_time}ms"}
+
+
+@app.put("/app/transactions/seed/{userid}", status_code=status.HTTP_201_CREATED,
+         summary="Seed Transactions using Faker",
+         description="Seed Transactions using Faker")
+async def seed_transactions(userid: str, number : int = Body(5), db: Session = Depends(get_db)):
+    start_time = time.process_time()
+    rst = create_transactions_for_user(db, userid, number)
+    process_time = round((time.process_time() - start_time) * 1000, 2)
+    return {"processTime": f"{process_time}ms", "created": rst}
 
 
 @app.get("/transaction/query/id/{id}", response_model=TransactionOut, summary="Query transaction by id")

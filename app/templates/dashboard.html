@@ -33,6 +33,9 @@
             self : false,
             loadingData : false,
             chart : null,
+            queryParams : {
+                action: "get"
+            },
 
             init : function() {
                 self = this;
@@ -71,9 +74,7 @@
                                 return r;
                                 },[])
                          };
-
                     });
-
                     tgMapped.forEach(tgm => {
                         self.addChartDataset(tgm.type,tgm.data,tgm.type);
                     });
@@ -102,7 +103,14 @@
                         responsive: true,
                         scales: {
                             y: {
-                                min: 0
+                                min: 0,
+                                max: 100000,
+                                type: 'logarithmic'
+                            },
+                            x: {
+                                type: 'time',
+                                min: new Date(2020, 1, 1).valueOf(),
+                                max: new Date().valueOf(),
                             }
                         },
                         legend: {
@@ -123,21 +131,15 @@
                     return;
                 }
                 this.loadingData = true;
-                let action = $('#actions').find('a.active');
-                const params = action.data("params");
-                action = action.data("value")
+
                 let data = {
-                    action : action,
                     "userId" : this.userId,
                     "stream" : true
                 };
 
-                $('#' + params).children('input[required],select[required]').each(function () {
-                    data[$(this).attr('id').replace(params,'').replace('.','').trim()] = $(this).val();
-                });
+                data = Object.assign(data, this.queryParams);
 
                 this.ws.send(JSON.stringify(data));
-                //event.preventDefault();
             },
             setConnectionBadge : function(connected) {
                 if (connected) {
@@ -159,7 +161,7 @@
                 row += "<td>" + transaction.description + "</td>";
                 row += "<td>" + transaction.category + "</td>";
                 row += "<td>" + transaction.type + "</td>";
-                row += "<td>" + transaction.timestamp + "</td>";
+                row += "<td>" + transaction.date + "</td>";
                 row += "</tr>";
                 return row;
             },
@@ -293,12 +295,36 @@
                 }
             },
 
-            paramsContainer : function(id, labelKey,label, innerHtml) {
-               let row = `<div class="mb-3 params" id="${id}>`;
-               row += `<label class="form-label" for="${id}.${labelKey}">${label}</label>`;
-               row += innerHtml;
-               row += "</div>";
-               return row;
+            paramsContainer : function(innerHtml, action) {
+               return `<div class="modal fade" id="paramsModel" tabindex="-1" aria-labelledby="paramsModelLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paramsModelLabel">Query Params</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        ${innerHtml}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="dashboard.saveParams" data-action="${action}">Query</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+            },
+            saveParams : function (event) {
+                    let params = {
+                        action: event.target.getAttribute("data-action")
+                    };
+
+                    $('#paramsModel input').each(function () {
+                        const id = $(this).attr('id');
+                        const key = id.split('.')[1];
+                        params[key] = $(this).val();
+                    });
+                    self.queryParams = params;
             },
 
             addChartLabel : function(label) {
@@ -311,7 +337,12 @@
                 let dataset = {
                     label: label,
                     data: data,
-                    borderWidth: 1
+                    borderWidth: 1,
+                    pointStyle: 'circle',
+                    pointRadius: 10,
+                    pointHoverRadius: 15,
+                    parsing: false,
+                    normalized: true
                 };
 
                 if (type === "credit") {
@@ -415,19 +446,20 @@
               </button>
               <ul class="dropdown-menu" aria-labelledby="dataMenu" id="actions">
                   <li><span class="dropdown-item-text">Select Data Query</span></li>
-                <li ><a class="dropdown-item active" href="#" data-value="get" data-params="paramsGet">Get</a></li>
-                <li ><a class="dropdown-item" href="#" data-value="get_by_type" data-params="paramsType">Get By Transaction Type</a></li>
-                <li ><a data-value="get_by_amount" data-params="paramsAmount">Get By Amount</a></li>
-                <li ><a data-value="get_by_currency" data-params="paramsCurrency">Get By Currency</a></li>
-                <li ><a data-value="get_by_amount_range" data-params="paramsAmountRange">Get By Amount Range</a></li>
-                <li ><a data-value="get_by_category" data-params="paramsCategory">Get By Category</a></li>
-                <li ><a data-value="get_by_date_range" data-params="paramsDateRange">Get By Date Range</a></li>
+                <li ><a class="dropdown-item active" data-value="get" data-params="paramsGet">Get</a></li>
+                <li ><a class="dropdown-item" data-value="get_by_type" data-params="paramsType">Get By Transaction Type</a></li>
+                <li ><a class="dropdown-item" data-value="get_by_amount" data-params="paramsAmount">Get By Amount</a></li>
+                <li ><a class="dropdown-item" data-value="get_by_currency" data-params="paramsCurrency">Get By Currency</a></li>
+                <li ><a class="dropdown-item" data-value="get_by_amount_range" data-params="paramsAmountRange">Get By Amount Range</a></li>
+                <li ><a class="dropdown-item" data-value="get_by_category" data-params="paramsCategory">Get By Category</a></li>
+                <li ><a class="dropdown-item" data-value="get_by_date_range" data-params="paramsDateRange">Get By Date Range</a></li>
               </ul>
             </div>
                 <button type="button" class="btn btn-sm btn-success" onclick="dashboard.loadData();">Load</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
             </div>
         </div>
+                <div id="modalContainer"></div>
       </div>
         <canvas class="my-4 w-100" id="chart" width="900" height="380"></canvas>
         <h2>Transactions</h2>
@@ -458,11 +490,21 @@
 
 </div>
 <script>
-
     $.when($.ready).then(function (data){
        dashboard.init();
-    });
+        $('#actions a').on('click', function(e){
+            const paramsKey = $(this).attr('data-value');
+           const paramsId = $(this).attr('data-params');
 
+           const innerHtml = dashboard.innerParams(paramsKey);
+           const container = dashboard.paramsContainer(innerHtml, paramsId);
+           $('#modalContainer').html(container);
+
+           const modal = document.getElementById('paramsModel');
+           const bs = new bootstrap.Modal(modal, {keyboard: false});
+           bs.show();
+        });
+    });
 </script>
 
 </body>
