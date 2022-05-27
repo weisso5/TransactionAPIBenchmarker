@@ -24,8 +24,7 @@ DATABASE_URL = f"postgresql+psycopg2://{settings.db_user}:{settings.db_password}
 
 engine = sqlalchemy.create_engine(
     DATABASE_URL,
-    echo=True,
-
+    echo=False,
 )
 
 if not database_exists(engine.url):
@@ -156,7 +155,7 @@ def create_transactions_for_user(db: Session, user_id: str, number: int):
 
 
 def add_formatted_date(tran: Transaction):
-    tran.date = tran.timestamp.strftime("%m/%d/%Y")
+    tran.date = tran.timestamp.strftime("%Y-%m-%d")
     tran.time = tran.timestamp.strftime("%H:%M:%S")
     tran.timezone = tran.timestamp.strftime("%Z")
     return tran
