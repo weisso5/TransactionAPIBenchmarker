@@ -43,7 +43,8 @@
             chart: null,
             data: [],
             queryParams: {
-                action: "get"
+                action: "get",
+                max: 0
             },
 
             init: function () {
@@ -62,6 +63,7 @@
                     $('#loading').fadeIn('fast').delay(1000).fadeOut('fast');
                     let data = JSON.parse(event.data);
                     const transactions = data.results;
+                    self.queryParams.max = data.max;
                     self.data = transactions;
                     const toAdd = transactions.filter(function (transaction) {
                         return !self.transactionRowExists(transaction.id);
@@ -198,11 +200,6 @@
                 data = Object.assign(data, this.queryParams);
 
                 this.ws.send(JSON.stringify(data));
-            },
-            resetDataLoad: function () {
-                self.loadingData = false;
-                self.ws.close();
-                self.init();
             },
             setConnectionBadge: function (connected) {
                 if (connected) {
@@ -384,7 +381,6 @@
                 const modal = document.getElementById('paramsModel');
                 const bs = bootstrap.Modal.getInstance(modal);
                 bs.hide();
-                self.resetDataLoad();
                 self.loadData();
             },
 
