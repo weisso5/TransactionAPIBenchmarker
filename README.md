@@ -54,15 +54,10 @@ api                     | INFO:     Application startup complete.
 
 ## Check it
 
-Open your browser at: <a href="http://127.0.0.1:8000/app" class="external-link" target="_blank">http://127.0.0.1:8000/app</a>.
-
-or
-
-Open your browser at: <a href="http://127.0.0.1:8000/app/view" class="external-link" target="_blank">http://127.0.0.1:8000/app/view</a>.
-
+Open your browser at: <a href="http://127.0.0.1:8000/app/dashboard" class="external-link" target="_blank">http://127.0.0.1:8000/app/dashboard</a> to get started.
 
 ### Even better:
 
 Open your browser at: <a href="http://127.0.0.1:8000/docs" class="external-link" target="_blank">http://127.0.0.1:8000/docs</a>.
 
-You will see the automatic interactive API documentation (provided by <a href="https://github.com/swagger-api/swagger-ui" class="external-link" target="_blank">Swagger UI</a>):
+You will see the automatic interactive API documentation (provided by <a href="https://github.com/swagger-api/swagger-ui" class="external-link" target="_blank">Swagger UI</a>)

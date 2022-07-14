@@ -82,7 +82,7 @@ async def app_login(request: Request):
 @app.get("/app/dashboard", summary="Get Dashboard Page", description="returns Dashboard Page", response_class=HTMLResponse)
 async def app_dashboard(request: Request, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_302_FOUND)
     user = get_user_by_id(db, token)
 
     return templates.TemplateResponse("dashboard.html", {"request": request,"requestor": user})
@@ -91,14 +91,14 @@ async def app_dashboard(request: Request, token: Optional[str] = Cookie(None), d
 @app.get("/app/transactions", summary="Get Transactions Page", description="returns Transactions Page", response_class=HTMLResponse)
 async def app_transactions(request: Request, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_302_FOUND)
     user = get_user_by_id(db, token)
     return templates.TemplateResponse("transactions.html", {"request": request,"requestor": user})
 
 @app.get("/app/transactions/create", summary="Get Create Transaction Page", description="returns Create Transaction Page", response_class=HTMLResponse)
 async def add_transaction(request: Request, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_302_FOUND)
     user = get_user_by_id(db, token)
     return templates.TemplateResponse("add_transaction.html", {"request": request,"requestor": user})
 
@@ -106,7 +106,7 @@ async def add_transaction(request: Request, token: Optional[str] = Cookie(None),
 @app.get("/app/transactions/{transactionId}", summary="Get Transaction Page", description="returns Transaction Page", response_class=HTMLResponse)
 async def app_transaction(request: Request, transactionId: int, token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if not token:
-        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_401_UNAUTHORIZED)
+        return responses.RedirectResponse(url="/app/login", status_code=status.HTTP_302_FOUND)
     user = get_user_by_id(db, token)
     return templates.TemplateResponse("transaction.html", {"request": request,"requestor": user})
 
@@ -241,43 +241,43 @@ async def websocket_flow_execute(websocket: WebSocket, userid: str, db: Session,
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     elif query["action"] == "get_by_type":
         rst = get_transactions_for_user_by_type(db, userid, query["type"])
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get_by_type", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get_by_type", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     elif query["action"] == "get_by_amount":
         rst = get_transactions_by_amount(db, query["amount"], query["currency"], userid)
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get_by_amount", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get_by_amount", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     elif query["action"] == "get_by_currency":
         rst = get_transactions_by_currency(db, query["currency"], userid)
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get_by_currency", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get_by_currency", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     elif query["action"] == "get_by_amount_range":
         rst = get_transactions_by_amount_range(db, query["amount_min"], query["amount_max"], query["currency"], userid)
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get_by_amount_range", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get_by_amount_range", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     elif query["action"] == "get_by_category":
         rst = get_transactions_by_category(db, query["category"], userid)
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get_by_category", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get_by_category", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     elif query["action"] == "get_by_date_range":
         rst = get_transactions_by_date_range(db, query["date_min"], query["date_max"], userid)
         maxId = max(rst, key=lambda x: x.id).id
         process_time = round((time.process_time() - start_time) * 1000, 2)
         await websocket.send_json(
-            {"action": "get_by_date_range", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms"}, "max" : maxId)
+            {"action": "get_by_date_range", "results": jsonable_encoder(rst), "processing_time": f"{process_time}ms", "max" : maxId})
     else:
         await websocket.send_json({"action": "error", "message": "Unknown action"})
 

@@ -10,5 +10,10 @@
     <orderEntry type="library" name="bootstrap" level="application" />
     <orderEntry type="library" name="chart.js" level="application" />
     <orderEntry type="library" name="jquery.min.js" level="application" />
+    <orderEntry type="library" name="date-fns" level="application" />
+    <orderEntry type="library" name="moment" level="application" />
+    <orderEntry type="library" name="chartjs-adapter-moment" level="application" />
+    <orderEntry type="library" name="luxon" level="application" />
+    <orderEntry type="library" name="chartjs-adapter-luxon" level="application" />
   </component>
 </module>
