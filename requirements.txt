@@ -19,7 +19,7 @@ cython==0.29.28
 uvloop==0.16.0
 watchgod==0.8.2
 websockets==10.2
-wheel==0.37.1
+wheel==0.38.1
 sqlalchemy==1.4.35
 SQLAlchemy-Utils==0.38.2
 databases[postgresql]==0.5.5
